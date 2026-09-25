@@ -31,6 +31,22 @@ uv run uvicorn queue_service:app --host 0.0.0.0 --port 8000
 
 `create_app()` accepts an optional SQLite database path. If omitted, it uses `KINETIQ_DATABASE`, then defaults to `kinetiq.db` in the current working directory. The package includes FastAPI and its runtime dependencies; the consuming project only needs to provide an ASGI server if it wants to run the service with one other than Uvicorn.
 
+## Configure a Message Store
+
+SQLite is the built-in default. To use Redis, PostgreSQL, a NoSQL database, object storage, or another backend, implement the public `QueueStore` protocol and inject its instance into the app:
+
+```python
+from kinetiq import create_app
+from my_project.redis_store import RedisQueueStore
+
+store = RedisQueueStore.from_url("redis://localhost:6379/0")
+app = create_app(store=store)
+```
+
+KinetiQ defines the backend contract in [`kinetiq/core/store.py`](kinetiq/core/store.py). An adapter must implement initialization, queue creation/lookup, publishing, atomic message claims, lease-aware acknowledgement, and exhausted-message DLQ routing. The `QueueStore` protocol documents important behavioral guarantees that the engine relies on. Backend adapters and their driver dependencies are not bundled with KinetiQ; install the adapter package in the host project.
+
+Not every storage product provides the atomic operations a queue requires. In particular, an adapter for object storage such as S3 must add coordination or conditional-write logic to prevent two consumers claiming the same message and to make DLQ transfers loss-safe. Simply storing message blobs in a bucket does not satisfy the `QueueStore` contract.
+
 Until the first PyPI release is published, KinetiQ can also be installed directly from the repository:
 
 ```sh

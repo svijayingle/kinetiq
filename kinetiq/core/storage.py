@@ -7,17 +7,7 @@ from uuid import uuid4
 
 import aiosqlite
 
-
-class QueueNotFoundError(Exception):
-    def __init__(self, queue_name: str) -> None:
-        self.queue_name = queue_name
-        super().__init__(f"Queue '{queue_name}' does not exist")
-
-
-class QueueAlreadyExistsError(Exception):
-    def __init__(self, queue_name: str) -> None:
-        self.queue_name = queue_name
-        super().__init__(f"Queue '{queue_name}' already exists")
+from kinetiq.core.store import QueueAlreadyExistsError, QueueNotFoundError
 
 
 class SQLiteStorage:
