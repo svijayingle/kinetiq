@@ -3,7 +3,7 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
-from kinetiq import create_app
+from kinetiq import QueueStore, SQLiteStorage, create_app
 
 
 @pytest.fixture
@@ -128,3 +128,20 @@ def test_duplicate_queue_and_unknown_queue_responses(client):
     create_queue(client, "unique")
     assert client.post("/queues", json={"queue_name": "unique"}).status_code == 409
     assert send_message(client, "missing").status_code == 404
+
+
+def test_store_can_be_injected_through_public_factory(tmp_path):
+    store = SQLiteStorage(tmp_path / "injected-store.db")
+    assert isinstance(store, QueueStore)
+
+    with TestClient(create_app(store=store)) as client:
+        response = client.post("/queues", json={"queue_name": "injected"})
+
+    assert response.status_code == 201
+
+
+def test_custom_store_and_sqlite_path_are_mutually_exclusive(tmp_path):
+    store = SQLiteStorage(tmp_path / "injected-store.db")
+
+    with pytest.raises(ValueError, match="either 'store' or 'database_path'"):
+        create_app(tmp_path / "another.db", store=store)

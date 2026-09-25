@@ -1,9 +1,9 @@
-from kinetiq.core.storage import SQLiteStorage
+from kinetiq.core.store import QueueStore
 
 
 class DeadLetterRouter:
-    def __init__(self, storage: SQLiteStorage) -> None:
-        self.storage = storage
+    def __init__(self, store: QueueStore) -> None:
+        self.store = store
 
     async def route_exhausted(self, queue_name: str, now: float) -> int:
-        return await self.storage.route_exhausted_messages(queue_name, now)
+        return await self.store.route_exhausted_messages(queue_name, now)
