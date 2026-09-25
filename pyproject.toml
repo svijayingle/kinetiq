@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.26"]
+requires = ["hatchling==1.27.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -7,19 +7,21 @@ name = "kinetiq"
 version = "0.1.0"
 description = "A message queue engine implementing an SQS-style API"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
+authors = [{ email = "svijayingle@gmail.com" }]
 dependencies = [
-    "aiosqlite",
-    "fastapi",
-    "pydantic",
-    "uvicorn",
+    "aiosqlite==0.22.1",
+    "fastapi==0.141.1",
+    "pydantic==2.13.5",
+    "uvicorn==0.54.0",
 ]
 
 [dependency-groups]
 dev = [
-    "datamodel-code-generator",
-    "httpx",
-    "pytest",
+    "datamodel-code-generator==0.83.0",
+    "httpx==0.28.1",
+    "pytest==9.1.1",
+    "ruff==0.16.9",
 ]
 
 [tool.uv]

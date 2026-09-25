@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from kinetiq.core.dlq import DeadLetterRouter
@@ -27,7 +27,7 @@ class QueueEngine:
         await self.store.initialize()
 
     async def create_queue(self, request: CreateQueueRequest) -> QueueResponse:
-        created_at = datetime.now(timezone.utc)
+        created_at = datetime.now(UTC)
         result = await self.store.create_queue(
             queue_name=request.queue_name,
             visibility_timeout=(
@@ -44,7 +44,7 @@ class QueueEngine:
     async def send_message(
         self, queue_name: str, request: SendMessageRequest
     ) -> SendMessageResponse:
-        sent_at = datetime.now(timezone.utc)
+        sent_at = datetime.now(UTC)
         message_id = await self.store.publish(
             queue_name=queue_name,
             message_id=str(uuid4()),

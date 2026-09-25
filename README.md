@@ -47,6 +47,8 @@ KinetiQ defines the backend contract in [`kinetiq/core/store.py`](kinetiq/core/s
 
 Not every storage product provides the atomic operations a queue requires. In particular, an adapter for object storage such as S3 must add coordination or conditional-write logic to prevent two consumers claiming the same message and to make DLQ transfers loss-safe. Simply storing message blobs in a bucket does not satisfy the `QueueStore` contract.
 
+See [Storage Backend Configuration](docs/storage-backends.md) for the adapter contract, prerequisites, setup examples, and backend-specific guidance for Redis, SQL, NoSQL, and S3.
+
 Until the first PyPI release is published, KinetiQ can also be installed directly from the repository:
 
 ```sh

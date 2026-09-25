@@ -1,5 +1,7 @@
 # Python bytecode and caches
 __pycache__/
+**/__pycache__/
+kinetiq/core/__pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/

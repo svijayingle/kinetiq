@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncIterator
 
 from fastapi import FastAPI
 
 from kinetiq.core.queue_engine import QueueEngine
-from kinetiq.core.store import QueueStore
 from kinetiq.core.storage import SQLiteStorage
+from kinetiq.core.store import QueueStore
 from kinetiq.routes.queues import router as queues_router
 
 
