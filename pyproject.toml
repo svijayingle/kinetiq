@@ -1,0 +1,25 @@
+[project]
+name = "KinetiQ"
+version = "0.1.0"
+description = "A message queue engine implementing an SQS-style API"
+requires-python = ">=3.10"
+dependencies = [
+    "aiosqlite",
+    "fastapi",
+    "pydantic",
+    "uvicorn",
+]
+
+[dependency-groups]
+dev = [
+    "datamodel-code-generator",
+    "httpx",
+    "pytest",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

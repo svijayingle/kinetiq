@@ -1,0 +1,42 @@
+@baseUrl = http://127.0.0.1:8000
+@queueName = orders
+
+### Create a dead-letter queue before creating a source queue that references it
+POST {{baseUrl}}/queues
+Content-Type: application/json
+
+{
+  "queue_name": "orders-dlq"
+}
+
+### Create a queue
+POST {{baseUrl}}/queues
+Content-Type: application/json
+
+{
+  "queue_name": "{{queueName}}",
+  "visibility_timeout": 30,
+  "max_receive_count": 5,
+  "dlq_name": "orders-dlq"
+}
+
+### Send a message
+POST {{baseUrl}}/queues/{{queueName}}/messages
+Content-Type: application/json
+
+{
+  "body": "{\"order_id\": 1024, \"amount\": 250.0}",
+  "deduplication_id": "order-1024",
+  "message_group_id": "orders"
+}
+
+### Receive messages using long polling
+GET {{baseUrl}}/queues/{{queueName}}/messages?max_messages=10&wait_time_seconds=5
+
+### Acknowledge a message; replace the handle with one from a receive response
+DELETE {{baseUrl}}/queues/{{queueName}}/messages
+Content-Type: application/json
+
+{
+  "receipt_handle": "replace-with-receipt-handle"
+}

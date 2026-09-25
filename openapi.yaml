@@ -1,0 +1,192 @@
+openapi: 3.0.3
+info:
+  title: KinetiQ
+  description: KinetiQ is a distributed message queue engine implementing visibility timeouts, long polling, DLQ routing, and deduplication.
+  version: 1.0.0
+paths:
+  /queues:
+    post:
+      summary: Create a Queue
+      operationId: create_queue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQueueRequest'
+      responses:
+        '201':
+          description: Queue created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueResponse'
+
+  /queues/{queue_name}/messages:
+    post:
+      summary: Send Message (Publish)
+      operationId: send_message
+      parameters:
+        - name: queue_name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+      responses:
+        '200':
+          description: Message published successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendMessageResponse'
+
+    get:
+      summary: Receive Messages (Long Polling & Visibility Lease)
+      operationId: receive_messages
+      parameters:
+        - name: queue_name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: max_messages
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+            maximum: 10
+        - name: visibility_timeout
+          in: query
+          description: Overrides the queue's default visibility timeout for this receive request.
+          schema:
+            type: integer
+            minimum: 0
+        - name: wait_time_seconds
+          in: query
+          description: Long polling wait duration (0-20s).
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+            maximum: 20
+      responses:
+        '200':
+          description: Messages retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+
+    delete:
+      summary: Acknowledge and Delete Message
+      operationId: delete_message
+      parameters:
+        - name: queue_name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteMessageRequest'
+      responses:
+        '204':
+          description: Message successfully acknowledged and deleted.
+        '404':
+          description: Invalid receipt handle or message lease expired.
+
+components:
+  schemas:
+    CreateQueueRequest:
+      type: object
+      required:
+        - queue_name
+      properties:
+        queue_name:
+          type: string
+          example: "orders-processing-queue"
+        visibility_timeout:
+          type: integer
+          default: 30
+          minimum: 0
+        max_receive_count:
+          type: integer
+          default: 5
+          minimum: 1
+          description: Max retries before sending message to DLQ.
+        dlq_name:
+          type: string
+          nullable: true
+          example: "orders-dlq"
+
+    QueueResponse:
+      type: object
+      properties:
+        queue_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    SendMessageRequest:
+      type: object
+      required:
+        - body
+      properties:
+        body:
+          type: string
+          example: '{"order_id": 1024, "amount": 250.0}'
+        deduplication_id:
+          type: string
+          nullable: true
+          description: Optional key for FIFO message deduplication.
+        message_group_id:
+          type: string
+          nullable: true
+          description: Sequential group ID for FIFO ordering.
+
+    SendMessageResponse:
+      type: object
+      properties:
+        message_id:
+          type: string
+          format: uuid
+        md5_checksum:
+          type: string
+
+    Message:
+      type: object
+      properties:
+        message_id:
+          type: string
+          format: uuid
+        receipt_handle:
+          type: string
+          description: Ephemeral token required to acknowledge/delete the message.
+        body:
+          type: string
+        receive_count:
+          type: integer
+        sent_at:
+          type: string
+          format: date-time
+
+    DeleteMessageRequest:
+      type: object
+      required:
+        - receipt_handle
+      properties:
+        receipt_handle:
+          type: string

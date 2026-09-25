@@ -1,0 +1,1 @@
+"""KinetiQ message queue service."""
