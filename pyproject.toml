@@ -1,7 +1,12 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
 [project]
-name = "KinetiQ"
+name = "kinetiq"
 version = "0.1.0"
 description = "A message queue engine implementing an SQS-style API"
+readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "aiosqlite",
@@ -18,7 +23,9 @@ dev = [
 ]
 
 [tool.uv]
-package = false
+
+[tool.hatch.build.targets.wheel]
+packages = ["kinetiq"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

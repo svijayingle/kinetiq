@@ -36,3 +36,13 @@ jobs:
 
       - name: Run tests and integration tests
         run: uv run pytest -q
+
+      - name: Build package distributions
+        run: uv build
+
+      - name: Verify the built wheel installs
+        run: |
+          uv venv "$RUNNER_TEMP/kinetiq-wheel-env"
+          uv pip install --python "$RUNNER_TEMP/kinetiq-wheel-env/bin/python" "$GITHUB_WORKSPACE"/dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/kinetiq-wheel-env/bin/python" -c "from kinetiq import create_app; assert create_app().title == 'KinetiQ'"
