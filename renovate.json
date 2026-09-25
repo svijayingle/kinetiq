@@ -1,0 +1,26 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "dependencyDashboard": true,
+  "labels": ["dependencies"],
+  "prTitle": "chore(deps): {{{commitMessage}}}",
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "packageRules": [
+    {
+      "description": "Group non-major Python dependency updates managed by uv",
+      "matchManagers": ["uv"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "groupName": "Python non-major dependencies"
+    },
+    {
+      "description": "Group GitHub Actions updates separately from application dependencies",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions"
+    }
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 5am on Monday"]
+  }
+}
