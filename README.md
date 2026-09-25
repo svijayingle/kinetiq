@@ -2,7 +2,42 @@
 
 KinetiQ is an SQS-inspired message queue API built with FastAPI and SQLite WAL persistence. It supports visibility leases, long polling, message groups, deduplication, and dead-letter queue routing.
 
-## Requirements
+## Install and Host KinetiQ
+
+After a release is published to PyPI, add KinetiQ to another project with:
+
+```sh
+uv add kinetiq
+```
+
+Or install it with pip:
+
+```sh
+python -m pip install kinetiq
+```
+
+Create an ASGI application from your project's module and run it with an ASGI server:
+
+```python
+# queue_service.py
+from kinetiq import create_app
+
+app = create_app(database_path="./kinetiq.db")
+```
+
+```sh
+uv run uvicorn queue_service:app --host 0.0.0.0 --port 8000
+```
+
+`create_app()` accepts an optional SQLite database path. If omitted, it uses `KINETIQ_DATABASE`, then defaults to `kinetiq.db` in the current working directory. The package includes FastAPI and its runtime dependencies; the consuming project only needs to provide an ASGI server if it wants to run the service with one other than Uvicorn.
+
+Until the first PyPI release is published, KinetiQ can also be installed directly from the repository:
+
+```sh
+uv add git+https://github.com/<owner>/<repository>.git
+```
+
+## Development Requirements
 
 - Python 3.10 or newer
 - [uv](https://docs.astral.sh/uv/)
@@ -65,6 +100,12 @@ Run the API and integration tests:
 
 ```sh
 uv run pytest -q
+```
+
+Build the installable source distribution and wheel:
+
+```sh
+uv build
 ```
 
 Regenerate Pydantic models after changing the OpenAPI schemas:

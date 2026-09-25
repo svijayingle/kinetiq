@@ -3,7 +3,7 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
-from kinetiq.main import create_app
+from kinetiq import create_app
 
 
 @pytest.fixture
