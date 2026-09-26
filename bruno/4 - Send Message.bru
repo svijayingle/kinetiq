@@ -1,0 +1,17 @@
+meta {
+  name: Send Message
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/queues/{{queueName}}/messages
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "body": "Hello, world!"
+  }
+}

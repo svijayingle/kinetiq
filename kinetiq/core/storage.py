@@ -100,6 +100,40 @@ class SQLiteStorage:
             raise QueueNotFoundError(queue_name)
         return dict(row)
 
+    async def update_queue_visibility_timeout(
+        self, queue_name: str, visibility_timeout: int
+    ) -> dict[str, Any]:
+        async with self._connect() as connection:
+            await connection.execute("BEGIN IMMEDIATE")
+            cursor = await connection.execute(
+                "UPDATE queues SET visibility_timeout = ? WHERE queue_name = ?",
+                (visibility_timeout, queue_name),
+            )
+            if cursor.rowcount != 1:
+                await connection.rollback()
+                raise QueueNotFoundError(queue_name)
+            cursor = await connection.execute(
+                "SELECT * FROM queues WHERE queue_name = ?", (queue_name,)
+            )
+            row = await cursor.fetchone()
+            await connection.commit()
+        return dict(row)
+
+    async def count_messages(self, queue_name: str) -> int:
+        async with self._connect() as connection:
+            cursor = await connection.execute(
+                                """SELECT queue_name,
+                                                    (SELECT COUNT(*) FROM messages
+                                                     WHERE messages.queue_name = queues.queue_name)
+                                                            AS message_count
+                                     FROM queues WHERE queue_name = ?""",
+                (queue_name,),
+            )
+            row = await cursor.fetchone()
+        if row is None:
+            raise QueueNotFoundError(queue_name)
+        return int(row["message_count"])
+
     async def publish(
         self,
         queue_name: str,

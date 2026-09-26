@@ -22,6 +22,64 @@ paths:
               schema:
                 $ref: '#/components/schemas/QueueResponse'
 
+  /queues/{queue_name}:
+    parameters:
+      - name: queue_name
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get Queue Details
+      operationId: get_queue_details
+      responses:
+        '200':
+          description: Queue configuration and metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueDetailsResponse'
+        '404':
+          description: Queue not found
+    patch:
+      summary: Change Queue Visibility Timeout
+      operationId: update_queue_visibility_timeout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateQueueVisibilityTimeoutRequest'
+      responses:
+        '200':
+          description: Queue configuration after the timeout update
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueDetailsResponse'
+        '404':
+          description: Queue not found
+
+  /queues/{queue_name}/length:
+    get:
+      summary: Get Queue Length
+      operationId: get_queue_length
+      parameters:
+        - name: queue_name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Count of outstanding messages, including messages with active visibility leases
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueLengthResponse'
+        '404':
+          description: Queue not found
+
   /queues/{queue_name}/messages:
     post:
       summary: Send Message (Publish)
@@ -139,6 +197,52 @@ components:
         created_at:
           type: string
           format: date-time
+
+    QueueDetailsResponse:
+      type: object
+      required:
+        - queue_name
+        - created_at
+        - visibility_timeout
+        - max_receive_count
+      properties:
+        queue_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        visibility_timeout:
+          type: integer
+          minimum: 0
+        max_receive_count:
+          type: integer
+          minimum: 1
+        dlq_name:
+          type: string
+          nullable: true
+
+    QueueLengthResponse:
+      type: object
+      required:
+        - queue_name
+        - message_count
+      properties:
+        queue_name:
+          type: string
+        message_count:
+          type: integer
+          minimum: 0
+          description: Outstanding messages in the queue, including messages with active visibility leases.
+
+    UpdateQueueVisibilityTimeoutRequest:
+      type: object
+      required:
+        - visibility_timeout
+      properties:
+        visibility_timeout:
+          type: integer
+          minimum: 0
+          description: New default timeout for future message receives; existing visibility leases are unchanged.
 
     SendMessageRequest:
       type: object

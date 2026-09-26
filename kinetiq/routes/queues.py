@@ -7,9 +7,12 @@ from kinetiq.models import (
     CreateQueueRequest,
     DeleteMessageRequest,
     Message,
+    QueueDetailsResponse,
+    QueueLengthResponse,
     QueueResponse,
     SendMessageRequest,
     SendMessageResponse,
+    UpdateQueueVisibilityTimeoutRequest,
 )
 
 router = APIRouter(tags=["queues"])
@@ -37,6 +40,48 @@ async def create_queue(payload: CreateQueueRequest, request: Request) -> QueueRe
     try:
         return await _engine(request).create_queue(payload)
     except (QueueNotFoundError, QueueAlreadyExistsError) as error:
+        _raise_http_error(error)
+
+
+@router.get(
+    "/queues/{queue_name}",
+    operation_id="get_queue_details",
+    response_model=QueueDetailsResponse,
+)
+async def get_queue_details(queue_name: str, request: Request) -> QueueDetailsResponse:
+    try:
+        return await _engine(request).get_queue_details(queue_name)
+    except QueueNotFoundError as error:
+        _raise_http_error(error)
+
+
+@router.get(
+    "/queues/{queue_name}/length",
+    operation_id="get_queue_length",
+    response_model=QueueLengthResponse,
+)
+async def get_queue_length(queue_name: str, request: Request) -> QueueLengthResponse:
+    try:
+        return await _engine(request).get_queue_length(queue_name)
+    except QueueNotFoundError as error:
+        _raise_http_error(error)
+
+
+@router.patch(
+    "/queues/{queue_name}",
+    operation_id="update_queue_visibility_timeout",
+    response_model=QueueDetailsResponse,
+)
+async def update_queue_visibility_timeout(
+    queue_name: str,
+    payload: UpdateQueueVisibilityTimeoutRequest,
+    request: Request,
+) -> QueueDetailsResponse:
+    try:
+        return await _engine(request).update_queue_visibility_timeout(
+            queue_name, payload
+        )
+    except QueueNotFoundError as error:
         _raise_http_error(error)
 
 

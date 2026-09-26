@@ -37,6 +37,12 @@ class QueueStore(Protocol):
 
     async def get_queue(self, queue_name: str) -> dict[str, Any]: ...
 
+    async def update_queue_visibility_timeout(
+        self, queue_name: str, visibility_timeout: int
+    ) -> dict[str, Any]: ...
+
+    async def count_messages(self, queue_name: str) -> int: ...
+
     async def publish(
         self,
         queue_name: str,

@@ -1,6 +1,6 @@
 # KinetiQ
 
-KinetiQ is an SQS-inspired message queue API built with FastAPI and SQLite WAL persistence. It supports visibility leases, long polling, message groups, deduplication, and dead-letter queue routing.
+KinetiQ is an SQS-inspired message queue API built with FastAPI and SQLite WAL persistence. It supports queue detail lookup, outstanding-message counts, configurable visibility timeouts, visibility leases, long polling, message groups, deduplication, and dead-letter queue routing.
 
 ## Install and Host KinetiQ
 
@@ -78,6 +78,14 @@ uv run uvicorn kinetiq.main:app --reload
 
 The API listens at `http://127.0.0.1:8000`. Interactive OpenAPI documentation is available at `http://127.0.0.1:8000/docs`; the source contract is in [openapi.yaml](openapi.yaml).
 
+## Hello World with Bruno
+
+See [Using the Bruno Collection](docs/bruno.md) for setup, environment configuration, and the ordered Hello World workflow.
+
+### VS Code REST Client
+
+To run the same lifecycle with the VS Code REST Client extension, open [api_test.http](api_test.http) and send the requests in its **Hello World** section in order. Change `@exampleQueue` to a new name before running it again.
+
 ## Configuration
 
 By default, KinetiQ stores data in `kinetiq.db` in the current working directory. Set `KINETIQ_DATABASE` to use another SQLite file.
@@ -100,11 +108,16 @@ KINETIQ_DATABASE=/var/lib/kinetiq/kinetiq.db uv run uvicorn kinetiq.main:app --r
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | `POST` | `/queues` | Create a queue |
+| `GET` | `/queues/{queue_name}` | Get queue settings and metadata |
+| `PATCH` | `/queues/{queue_name}` | Change the queue's default visibility timeout |
+| `GET` | `/queues/{queue_name}/length` | Get the count of outstanding messages |
 | `POST` | `/queues/{queue_name}/messages` | Publish a message |
 | `GET` | `/queues/{queue_name}/messages` | Receive messages |
 | `DELETE` | `/queues/{queue_name}/messages` | Acknowledge a message using its receipt handle |
 
-Create a queue with `queue_name`; optional settings include `visibility_timeout`, `max_receive_count`, and `dlq_name`. Create a dead-letter queue first if a source queue will reference it.
+Create a queue with `queue_name`; optional settings include `visibility_timeout`, `max_receive_count`, and `dlq_name`. Create a dead-letter queue first if a source queue will reference it. Get queue details to inspect its creation time, default visibility timeout, retry limit, and DLQ configuration. Update the default visibility timeout with `PATCH /queues/{queue_name}`; this applies to future receives that do not supply an override and does not change leases already issued.
+
+The queue length endpoint reports all outstanding messages, including messages currently hidden by a visibility lease. Acknowledged messages are removed from the count; messages moved to a DLQ are counted in the destination queue instead.
 
 Publish a JSON body containing a string `body`. Optional `deduplication_id` and `message_group_id` values enable duplicate suppression for queued messages and ordered delivery within a message group.
 

@@ -1,0 +1,19 @@
+meta {
+  name: Receive Message
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/queues/{{queueName}}/messages?max_messages=1&wait_time_seconds=5
+  body: none
+  auth: none
+}
+
+script:post-response {
+  if (!res.body || res.body.length === 0) {
+    throw new Error("No message was received; run Send Message before this request.");
+  }
+
+  bru.setVar("receiptHandle", res.body[0].receipt_handle);
+}

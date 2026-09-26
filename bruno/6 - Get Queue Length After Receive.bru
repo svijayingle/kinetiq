@@ -1,0 +1,11 @@
+meta {
+  name: Get Queue Length After Receive
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/queues/{{queueName}}/length
+  body: none
+  auth: none
+}

@@ -48,6 +48,66 @@ def test_create_send_receive_and_acknowledge(client):
     assert client.get("/queues/orders/messages").json() == []
 
 
+def test_queue_details_and_visibility_timeout_update(client):
+    client.post(
+        "/queues",
+        json={
+            "queue_name": "managed",
+            "visibility_timeout": 20,
+            "max_receive_count": 3,
+        },
+    )
+
+    details = client.get("/queues/managed")
+    assert details.status_code == 200
+    assert details.json()["queue_name"] == "managed"
+    assert details.json()["visibility_timeout"] == 20
+    assert details.json()["max_receive_count"] == 3
+    assert details.json()["dlq_name"] is None
+
+    updated = client.patch(
+        "/queues/managed", json={"visibility_timeout": 45}
+    )
+    assert updated.status_code == 200
+    assert updated.json()["visibility_timeout"] == 45
+    assert client.get("/queues/managed").json()["visibility_timeout"] == 45
+
+
+def test_queue_length_counts_outstanding_messages_including_leased(client):
+    create_queue(client, "counted")
+    assert client.get("/queues/counted/length").json() == {
+        "queue_name": "counted",
+        "message_count": 0,
+    }
+    send_message(client, "counted", "first")
+    send_message(client, "counted", "second")
+    assert client.get("/queues/counted/length").json()["message_count"] == 2
+
+    received = client.get("/queues/counted/messages?max_messages=1").json()[0]
+    assert client.get("/queues/counted/length").json()["message_count"] == 2
+
+    acknowledged = client.request(
+        "DELETE",
+        "/queues/counted/messages",
+        json={"receipt_handle": received["receipt_handle"]},
+    )
+    assert acknowledged.status_code == 204
+    assert client.get("/queues/counted/length").json()["message_count"] == 1
+
+
+def test_queue_management_endpoints_validate_missing_queues_and_timeout(client):
+    assert client.get("/queues/missing").status_code == 404
+    assert client.get("/queues/missing/length").status_code == 404
+    assert client.patch(
+        "/queues/missing", json={"visibility_timeout": 10}
+    ).status_code == 404
+
+    create_queue(client, "validated")
+    assert client.patch(
+        "/queues/validated", json={"visibility_timeout": -1}
+    ).status_code == 422
+
+
 def test_visibility_lease_expires_and_old_receipt_is_rejected(client):
     client.post(
         "/queues",

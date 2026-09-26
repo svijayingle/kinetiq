@@ -1,4 +1,6 @@
 # Python bytecode and caches
+*.pyc
+*.cpython
 __pycache__/
 **/__pycache__/
 kinetiq/core/__pycache__/
