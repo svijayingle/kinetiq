@@ -121,6 +121,8 @@ Create a queue with `queue_name`; optional settings include `visibility_timeout`
 
 The queue length endpoint reports all outstanding messages, including messages currently hidden by a visibility lease. Acknowledged messages are removed from the count; messages moved to a DLQ are counted in the destination queue instead.
 
+See [Queue Flow Diagrams](docs/queue-flow.md) for pictures of the service components, message lifecycle, and the operations handled by each store method.
+
 Publish a JSON body containing a string `body`. Optional `deduplication_id` and `message_group_id` values enable duplicate suppression for queued messages and ordered delivery within a message group.
 
 Receive supports `max_messages` (1-10), an optional `visibility_timeout` override, and `wait_time_seconds` (0-20). When no override is supplied, the queue's configured visibility timeout is used. Each delivery includes a `receipt_handle`; submit it to the delete endpoint before the lease expires to acknowledge the message. After `max_receive_count` deliveries, an expired message is moved to its configured dead-letter queue on a subsequent receive request.
