@@ -1,0 +1,18 @@
+meta {
+  name: Create Queue
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/queues
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "queue_name": "{{queueName}}",
+    "visibility_timeout": 30
+  }
+}

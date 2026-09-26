@@ -1,0 +1,17 @@
+meta {
+  name: Delete Message
+  type: http
+  seq: 9
+}
+
+delete {
+  url: {{baseUrl}}/queues/{{queueName}}/messages
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "receipt_handle": "{{receiptHandle}}"
+  }
+}

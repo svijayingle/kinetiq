@@ -48,6 +48,66 @@ def test_create_send_receive_and_acknowledge(client):
     assert client.get("/queues/orders/messages").json() == []
 
 
+def test_queue_details_and_visibility_timeout_update(client):
+    client.post(
+        "/queues",
+        json={
+            "queue_name": "managed",
+            "visibility_timeout": 20,
+            "max_receive_count": 3,
+        },
+    )
+
+    details = client.get("/queues/managed")
+    assert details.status_code == 200
+    assert details.json()["queue_name"] == "managed"
+    assert details.json()["visibility_timeout"] == 20
+    assert details.json()["max_receive_count"] == 3
+    assert details.json()["dlq_name"] is None
+
+    updated = client.patch(
+        "/queues/managed", json={"visibility_timeout": 45}
+    )
+    assert updated.status_code == 200
+    assert updated.json()["visibility_timeout"] == 45
+    assert client.get("/queues/managed").json()["visibility_timeout"] == 45
+
+
+def test_queue_length_counts_outstanding_messages_including_leased(client):
+    create_queue(client, "counted")
+    assert client.get("/queues/counted/length").json() == {
+        "queue_name": "counted",
+        "message_count": 0,
+    }
+    send_message(client, "counted", "first")
+    send_message(client, "counted", "second")
+    assert client.get("/queues/counted/length").json()["message_count"] == 2
+
+    received = client.get("/queues/counted/messages?max_messages=1").json()[0]
+    assert client.get("/queues/counted/length").json()["message_count"] == 2
+
+    acknowledged = client.request(
+        "DELETE",
+        "/queues/counted/messages",
+        json={"receipt_handle": received["receipt_handle"]},
+    )
+    assert acknowledged.status_code == 204
+    assert client.get("/queues/counted/length").json()["message_count"] == 1
+
+
+def test_queue_management_endpoints_validate_missing_queues_and_timeout(client):
+    assert client.get("/queues/missing").status_code == 404
+    assert client.get("/queues/missing/length").status_code == 404
+    assert client.patch(
+        "/queues/missing", json={"visibility_timeout": 10}
+    ).status_code == 404
+
+    create_queue(client, "validated")
+    assert client.patch(
+        "/queues/validated", json={"visibility_timeout": -1}
+    ).status_code == 422
+
+
 def test_visibility_lease_expires_and_old_receipt_is_rejected(client):
     client.post(
         "/queues",
@@ -122,6 +182,57 @@ def test_exhausted_message_is_moved_to_dead_letter_queue(client):
     dead_letter = client.get("/queues/dead-letters/messages").json()
     assert len(dead_letter) == 1
     assert dead_letter[0]["body"] == "poison"
+
+
+def test_dlq_can_be_configured_after_queue_creation_and_routes_messages(client):
+    create_queue(client, "parking-lot")
+    client.post(
+        "/queues",
+        json={
+            "queue_name": "source-after-create",
+            "visibility_timeout": 0,
+            "max_receive_count": 1,
+        },
+    )
+
+    configured = client.put(
+        "/queues/source-after-create/dlq", json={"dlq_name": "parking-lot"}
+    )
+    assert configured.status_code == 200
+    assert configured.json()["dlq_name"] == "parking-lot"
+
+    send_message(client, "source-after-create", "after configuration")
+    first_delivery = client.get("/queues/source-after-create/messages").json()
+    assert first_delivery[0]["receive_count"] == 1
+    assert client.get("/queues/source-after-create/messages").json() == []
+
+    dead_letter = client.get("/queues/parking-lot/messages").json()
+    assert [message["body"] for message in dead_letter] == ["after configuration"]
+
+
+def test_dlq_configuration_validates_targets_and_cycles_and_can_be_cleared(client):
+    create_queue(client, "queue-a")
+    client.post(
+        "/queues", json={"queue_name": "queue-b", "dlq_name": "queue-a"}
+    )
+
+    assert client.delete("/queues/missing/dlq").status_code == 404
+    assert client.put(
+        "/queues/queue-a/dlq", json={"dlq_name": "missing"}
+    ).status_code == 404
+    assert client.put(
+        "/queues/queue-a/dlq", json={"dlq_name": "queue-a"}
+    ).status_code == 409
+    assert client.put(
+        "/queues/queue-a/dlq", json={"dlq_name": "queue-b"}
+    ).status_code == 409
+    assert client.post(
+        "/queues", json={"queue_name": "self-dlq", "dlq_name": "self-dlq"}
+    ).status_code == 409
+
+    cleared = client.delete("/queues/queue-b/dlq")
+    assert cleared.status_code == 200
+    assert cleared.json()["dlq_name"] is None
 
 
 def test_duplicate_queue_and_unknown_queue_responses(client):

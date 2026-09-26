@@ -1,0 +1,17 @@
+meta {
+  name: Create Dead-Letter Queue
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/queues
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "queue_name": "{{queueName}}-dlq"
+  }
+}

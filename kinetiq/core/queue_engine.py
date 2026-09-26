@@ -11,9 +11,12 @@ from kinetiq.core.store import QueueStore
 from kinetiq.models import (
     CreateQueueRequest,
     Message,
+    QueueDetailsResponse,
+    QueueLengthResponse,
     QueueResponse,
     SendMessageRequest,
     SendMessageResponse,
+    UpdateQueueVisibilityTimeoutRequest,
 )
 
 
@@ -40,6 +43,30 @@ class QueueEngine:
             created_at=created_at.isoformat(),
         )
         return QueueResponse.model_validate(result)
+
+    async def get_queue_details(self, queue_name: str) -> QueueDetailsResponse:
+        result = await self.store.get_queue(queue_name)
+        return QueueDetailsResponse.model_validate(result)
+
+    async def get_queue_length(self, queue_name: str) -> QueueLengthResponse:
+        message_count = await self.store.count_messages(queue_name)
+        return QueueLengthResponse(
+            queue_name=queue_name, message_count=message_count
+        )
+
+    async def update_queue_visibility_timeout(
+        self, queue_name: str, request: UpdateQueueVisibilityTimeoutRequest
+    ) -> QueueDetailsResponse:
+        result = await self.store.update_queue_visibility_timeout(
+            queue_name, request.visibility_timeout
+        )
+        return QueueDetailsResponse.model_validate(result)
+
+    async def configure_queue_dlq(
+        self, queue_name: str, dlq_name: str | None
+    ) -> QueueDetailsResponse:
+        result = await self.store.configure_queue_dlq(queue_name, dlq_name)
+        return QueueDetailsResponse.model_validate(result)
 
     async def send_message(
         self, queue_name: str, request: SendMessageRequest

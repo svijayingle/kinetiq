@@ -19,6 +19,9 @@ KinetiQ/
 │   │   └── dlq.py             # Dead-letter queue routing
 │   └── routes/
 │       └── queues.py          # Route handlers matching operationIds
+├── bruno/                     # Bruno API collection and request files
+├── docs/
+│   └── bruno.md               # Bruno setup, examples, and screenshots
 ├── tests/
 │   └── test_queue.py          # Integration and unit tests
 └── api_test.http              # VS Code REST Client requests
@@ -29,11 +32,14 @@ KinetiQ/
 - Treat `openapi.yaml` as the source of truth for the HTTP API. Update it before or alongside implementation changes that affect endpoints, parameters, schemas, or responses.
 - Use `uv` to manage dependencies. Declare runtime dependencies in `pyproject.toml` and commit the generated `uv.lock` file; do not maintain a separate `requirements.txt` unless deployment specifically requires one.
 - Keep `datamodel-code-generator` in the development dependency group and regenerate schemas with `uv run datamodel-codegen --input openapi.yaml --output kinetiq/models.py` after API schema changes.
-- Keep FastAPI routes in `kinetiq/routes/queues.py` aligned with the specification's `operationId` values: `create_queue`, `send_message`, `receive_messages`, and `delete_message`.
+- Keep FastAPI routes in `kinetiq/routes/queues.py` aligned with the specification's `operationId` values: `create_queue`, `get_queue_details`, `update_queue_visibility_timeout`, `get_queue_length`, `configure_queue_dlq`, `clear_queue_dlq`, `send_message`, `receive_messages`, and `delete_message`.
 - Keep request and response schemas in `kinetiq/models.py` generated from the OpenAPI specification. Do not manually introduce schema behavior that conflicts with the specification.
 - Keep message delivery behavior, visibility leases, and long polling in `kinetiq/core/queue_engine.py`; persistence and SQLite WAL behavior in `kinetiq/core/storage.py`; and dead-letter routing in `kinetiq/core/dlq.py`.
+- Whenever adding or changing a queue API or queue-management function, update `openapi.yaml`, regenerate `kinetiq/models.py`, implement and test the behavior, add or update the corresponding request in the flat `bruno/` collection, update `docs/bruno.md`, update `api_test.http`, and update the README API endpoint list and queue feature summary.
+- When adding or changing `QueueStore` methods, update its SQLite implementation and `docs/storage-backends.md` so custom backend authors can implement the same contract.
 - Keep `kinetiq/main.py` focused on application setup and router registration.
 - Use the declared runtime dependencies in `pyproject.toml`: FastAPI, Uvicorn, Pydantic, and aiosqlite. Avoid adding dependencies unless the feature requires them.
 - Add or update tests in `tests/test_queue.py` for API contract changes and queue behavior, including visibility timeout, long polling, retry limits, and DLQ routing when relevant.
 - Keep `api_test.http` examples consistent with the current API contract so they can be run with the VS Code REST Client extension.
+- Keep Bruno requests in the collection root, with sequence numbers set so the collection runner can execute workflows in order. Keep the local environment and Bruno documentation consistent with the requests.
 - Prefer small, focused changes that preserve the separation between routes, queue logic, persistence, and DLQ handling.

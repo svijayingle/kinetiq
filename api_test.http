@@ -1,5 +1,79 @@
 @baseUrl = http://127.0.0.1:8000
 @queueName = orders
+@exampleQueue = hello-world
+
+### Create a dead-letter queue for Hello World
+# @name createHelloWorldDlq
+POST {{baseUrl}}/queues
+Content-Type: application/json
+
+{
+  "queue_name": "{{exampleQueue}}-dlq"
+}
+
+### Create the Hello World source queue
+# @name createHelloWorldQueue
+POST {{baseUrl}}/queues
+Content-Type: application/json
+
+{
+  "queue_name": "{{exampleQueue}}"
+}
+
+### Configure its dead-letter queue
+PUT {{baseUrl}}/queues/{{exampleQueue}}/dlq
+Content-Type: application/json
+
+{
+  "dlq_name": "{{exampleQueue}}-dlq"
+}
+
+### Get queue details
+GET {{baseUrl}}/queues/{{exampleQueue}}
+
+### Change the queue's default visibility timeout
+PATCH {{baseUrl}}/queues/{{exampleQueue}}
+Content-Type: application/json
+
+{
+  "visibility_timeout": 45
+}
+
+### Verify the updated queue details
+GET {{baseUrl}}/queues/{{exampleQueue}}
+
+### Send a Hello World message
+# @name publishHelloWorldMessage
+POST {{baseUrl}}/queues/{{exampleQueue}}/messages
+Content-Type: application/json
+
+{
+  "body": "Hello, world!"
+}
+
+### Get the number of outstanding messages
+GET {{baseUrl}}/queues/{{exampleQueue}}/length
+
+### Receive the message
+# @name receiveHelloWorldMessage
+GET {{baseUrl}}/queues/{{exampleQueue}}/messages?max_messages=1&wait_time_seconds=5
+
+### The count includes the received message while its visibility lease is active
+GET {{baseUrl}}/queues/{{exampleQueue}}/length
+
+### Delete the received message using its returned receipt handle
+DELETE {{baseUrl}}/queues/{{exampleQueue}}/messages
+Content-Type: application/json
+
+{
+  "receipt_handle": "{{receiveHelloWorldMessage.response.body.$[0].receipt_handle}}"
+}
+
+### Verify the message was removed from the queue
+GET {{baseUrl}}/queues/{{exampleQueue}}/length
+
+### Clear dead-letter routing from the source queue
+DELETE {{baseUrl}}/queues/{{exampleQueue}}/dlq
 
 ### Create a dead-letter queue before creating a source queue that references it
 POST {{baseUrl}}/queues

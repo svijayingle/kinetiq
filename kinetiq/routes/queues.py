@@ -2,14 +2,22 @@ from fastapi import APIRouter, HTTPException, Query, Response, status
 from starlette.requests import Request
 
 from kinetiq.core.queue_engine import QueueEngine
-from kinetiq.core.storage import QueueAlreadyExistsError, QueueNotFoundError
+from kinetiq.core.store import (
+    QueueAlreadyExistsError,
+    QueueDeadLetterCycleError,
+    QueueNotFoundError,
+)
 from kinetiq.models import (
+    ConfigureQueueDlqRequest,
     CreateQueueRequest,
     DeleteMessageRequest,
     Message,
+    QueueDetailsResponse,
+    QueueLengthResponse,
     QueueResponse,
     SendMessageRequest,
     SendMessageResponse,
+    UpdateQueueVisibilityTimeoutRequest,
 )
 
 router = APIRouter(tags=["queues"])
@@ -24,6 +32,8 @@ def _raise_http_error(error: Exception) -> None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error))
     if isinstance(error, QueueAlreadyExistsError):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error))
+    if isinstance(error, QueueDeadLetterCycleError):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error))
     raise error
 
 
@@ -36,7 +46,83 @@ def _raise_http_error(error: Exception) -> None:
 async def create_queue(payload: CreateQueueRequest, request: Request) -> QueueResponse:
     try:
         return await _engine(request).create_queue(payload)
-    except (QueueNotFoundError, QueueAlreadyExistsError) as error:
+    except (
+        QueueNotFoundError,
+        QueueAlreadyExistsError,
+        QueueDeadLetterCycleError,
+    ) as error:
+        _raise_http_error(error)
+
+
+@router.get(
+    "/queues/{queue_name}",
+    operation_id="get_queue_details",
+    response_model=QueueDetailsResponse,
+)
+async def get_queue_details(queue_name: str, request: Request) -> QueueDetailsResponse:
+    try:
+        return await _engine(request).get_queue_details(queue_name)
+    except QueueNotFoundError as error:
+        _raise_http_error(error)
+
+
+@router.get(
+    "/queues/{queue_name}/length",
+    operation_id="get_queue_length",
+    response_model=QueueLengthResponse,
+)
+async def get_queue_length(queue_name: str, request: Request) -> QueueLengthResponse:
+    try:
+        return await _engine(request).get_queue_length(queue_name)
+    except QueueNotFoundError as error:
+        _raise_http_error(error)
+
+
+@router.patch(
+    "/queues/{queue_name}",
+    operation_id="update_queue_visibility_timeout",
+    response_model=QueueDetailsResponse,
+)
+async def update_queue_visibility_timeout(
+    queue_name: str,
+    payload: UpdateQueueVisibilityTimeoutRequest,
+    request: Request,
+) -> QueueDetailsResponse:
+    try:
+        return await _engine(request).update_queue_visibility_timeout(
+            queue_name, payload
+        )
+    except QueueNotFoundError as error:
+        _raise_http_error(error)
+
+
+@router.put(
+    "/queues/{queue_name}/dlq",
+    operation_id="configure_queue_dlq",
+    response_model=QueueDetailsResponse,
+)
+async def configure_queue_dlq(
+    queue_name: str,
+    payload: ConfigureQueueDlqRequest,
+    request: Request,
+) -> QueueDetailsResponse:
+    try:
+        return await _engine(request).configure_queue_dlq(
+            queue_name, payload.dlq_name
+        )
+    except (QueueNotFoundError, QueueDeadLetterCycleError) as error:
+        _raise_http_error(error)
+
+
+@router.delete(
+    "/queues/{queue_name}/dlq",
+    operation_id="clear_queue_dlq",
+    response_model=QueueDetailsResponse,
+)
+async def clear_queue_dlq(queue_name: str, request: Request) -> QueueDetailsResponse:
+    try:
+        return await _engine(request).configure_queue_dlq(queue_name, None)
+    except QueueNotFoundError as error:
         _raise_http_error(error)
 
 

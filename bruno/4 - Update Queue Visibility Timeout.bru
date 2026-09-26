@@ -1,0 +1,17 @@
+meta {
+  name: Update Queue Visibility Timeout
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/queues/{{queueName}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "visibility_timeout": 45
+  }
+}

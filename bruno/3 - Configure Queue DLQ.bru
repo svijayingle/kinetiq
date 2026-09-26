@@ -1,0 +1,17 @@
+meta {
+  name: Configure Queue DLQ
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/queues/{{queueName}}/dlq
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "dlq_name": "{{queueName}}-dlq"
+  }
+}
