@@ -15,6 +15,15 @@ class QueueAlreadyExistsError(Exception):
         super().__init__(f"Queue '{queue_name}' already exists")
 
 
+class QueueDeadLetterCycleError(Exception):
+    def __init__(self, queue_name: str, dlq_name: str) -> None:
+        self.queue_name = queue_name
+        self.dlq_name = dlq_name
+        super().__init__(
+            f"Configuring queue '{queue_name}' to use '{dlq_name}' would create a dead-letter cycle"
+        )
+
+
 @runtime_checkable
 class QueueStore(Protocol):
     """Backend contract required by the KinetiQ queue engine.
@@ -42,6 +51,10 @@ class QueueStore(Protocol):
     ) -> dict[str, Any]: ...
 
     async def count_messages(self, queue_name: str) -> int: ...
+
+    async def configure_queue_dlq(
+        self, queue_name: str, dlq_name: str | None
+    ) -> dict[str, Any]: ...
 
     async def publish(
         self,

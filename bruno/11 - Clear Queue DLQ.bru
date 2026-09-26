@@ -1,0 +1,11 @@
+meta {
+  name: Clear Queue DLQ
+  type: http
+  seq: 11
+}
+
+delete {
+  url: {{baseUrl}}/queues/{{queueName}}/dlq
+  body: none
+  auth: none
+}

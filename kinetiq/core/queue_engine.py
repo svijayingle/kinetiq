@@ -62,6 +62,12 @@ class QueueEngine:
         )
         return QueueDetailsResponse.model_validate(result)
 
+    async def configure_queue_dlq(
+        self, queue_name: str, dlq_name: str | None
+    ) -> QueueDetailsResponse:
+        result = await self.store.configure_queue_dlq(queue_name, dlq_name)
+        return QueueDetailsResponse.model_validate(result)
+
     async def send_message(
         self, queue_name: str, request: SendMessageRequest
     ) -> SendMessageResponse:

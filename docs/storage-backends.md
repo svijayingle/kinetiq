@@ -46,6 +46,7 @@ The public protocol is defined in [`../kinetiq/core/store.py`](../kinetiq/core/s
 | `get_queue(queue_name)` | Return queue settings including `visibility_timeout`; raise `QueueNotFoundError` when absent. |
 | `update_queue_visibility_timeout(queue_name, visibility_timeout)` | Update the queue's default timeout and return its updated settings. The new default applies to future receives; do not alter existing visibility leases. Raise `QueueNotFoundError` when absent. |
 | `count_messages(queue_name)` | Return the count of all outstanding messages in the queue, including messages with active visibility leases. Raise `QueueNotFoundError` when absent. |
+| `configure_queue_dlq(queue_name, dlq_name)` | Set or clear a queue's DLQ and return its updated settings. Require the destination to exist, reject self-links and routing cycles with `QueueDeadLetterCycleError`, and raise `QueueNotFoundError` if the source or destination is absent. Pass `None` to clear the DLQ. |
 | `publish(...)` | Store the message and return its message ID. Enforce queue existence and deduplication when a deduplication ID is provided. |
 | `claim_messages(...)` | Atomically claim up to the requested number of eligible messages, increment delivery counts, set visibility leases and fresh receipt handles, and return message mappings. |
 | `acknowledge(...)` | Delete only the message currently associated with the receipt handle, in the named queue, while that lease is still valid. Return `False` for invalid or expired handles. |

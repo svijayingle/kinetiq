@@ -1,6 +1,6 @@
 # KinetiQ
 
-KinetiQ is an SQS-inspired message queue API built with FastAPI and SQLite WAL persistence. It supports queue detail lookup, outstanding-message counts, configurable visibility timeouts, visibility leases, long polling, message groups, deduplication, and dead-letter queue routing.
+KinetiQ is an SQS-inspired message queue API built with FastAPI and SQLite WAL persistence. It supports queue detail lookup, outstanding-message counts, configurable visibility timeouts, visibility leases, long polling, message groups, deduplication, and configurable dead-letter queue routing.
 
 ## Install and Host KinetiQ
 
@@ -111,11 +111,13 @@ KINETIQ_DATABASE=/var/lib/kinetiq/kinetiq.db uv run uvicorn kinetiq.main:app --r
 | `GET` | `/queues/{queue_name}` | Get queue settings and metadata |
 | `PATCH` | `/queues/{queue_name}` | Change the queue's default visibility timeout |
 | `GET` | `/queues/{queue_name}/length` | Get the count of outstanding messages |
+| `PUT` | `/queues/{queue_name}/dlq` | Configure the queue's dead-letter destination |
+| `DELETE` | `/queues/{queue_name}/dlq` | Clear the queue's dead-letter destination |
 | `POST` | `/queues/{queue_name}/messages` | Publish a message |
 | `GET` | `/queues/{queue_name}/messages` | Receive messages |
 | `DELETE` | `/queues/{queue_name}/messages` | Acknowledge a message using its receipt handle |
 
-Create a queue with `queue_name`; optional settings include `visibility_timeout`, `max_receive_count`, and `dlq_name`. Create a dead-letter queue first if a source queue will reference it. Get queue details to inspect its creation time, default visibility timeout, retry limit, and DLQ configuration. Update the default visibility timeout with `PATCH /queues/{queue_name}`; this applies to future receives that do not supply an override and does not change leases already issued.
+Create a queue with `queue_name`; optional settings include `visibility_timeout`, `max_receive_count`, and `dlq_name`. Create a dead-letter queue first if a source queue will reference it. For an existing source queue, use `PUT /queues/{queue_name}/dlq` to configure an existing destination, or `DELETE /queues/{queue_name}/dlq` to disable dead-letter routing. The API rejects missing queues and dead-letter cycles. Get queue details to inspect its creation time, default visibility timeout, retry limit, and DLQ configuration. Update the default visibility timeout with `PATCH /queues/{queue_name}`; this applies to future receives that do not supply an override and does not change leases already issued.
 
 The queue length endpoint reports all outstanding messages, including messages currently hidden by a visibility lease. Acknowledged messages are removed from the count; messages moved to a DLQ are counted in the destination queue instead.
 

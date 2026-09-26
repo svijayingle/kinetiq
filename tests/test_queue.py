@@ -184,6 +184,57 @@ def test_exhausted_message_is_moved_to_dead_letter_queue(client):
     assert dead_letter[0]["body"] == "poison"
 
 
+def test_dlq_can_be_configured_after_queue_creation_and_routes_messages(client):
+    create_queue(client, "parking-lot")
+    client.post(
+        "/queues",
+        json={
+            "queue_name": "source-after-create",
+            "visibility_timeout": 0,
+            "max_receive_count": 1,
+        },
+    )
+
+    configured = client.put(
+        "/queues/source-after-create/dlq", json={"dlq_name": "parking-lot"}
+    )
+    assert configured.status_code == 200
+    assert configured.json()["dlq_name"] == "parking-lot"
+
+    send_message(client, "source-after-create", "after configuration")
+    first_delivery = client.get("/queues/source-after-create/messages").json()
+    assert first_delivery[0]["receive_count"] == 1
+    assert client.get("/queues/source-after-create/messages").json() == []
+
+    dead_letter = client.get("/queues/parking-lot/messages").json()
+    assert [message["body"] for message in dead_letter] == ["after configuration"]
+
+
+def test_dlq_configuration_validates_targets_and_cycles_and_can_be_cleared(client):
+    create_queue(client, "queue-a")
+    client.post(
+        "/queues", json={"queue_name": "queue-b", "dlq_name": "queue-a"}
+    )
+
+    assert client.delete("/queues/missing/dlq").status_code == 404
+    assert client.put(
+        "/queues/queue-a/dlq", json={"dlq_name": "missing"}
+    ).status_code == 404
+    assert client.put(
+        "/queues/queue-a/dlq", json={"dlq_name": "queue-a"}
+    ).status_code == 409
+    assert client.put(
+        "/queues/queue-a/dlq", json={"dlq_name": "queue-b"}
+    ).status_code == 409
+    assert client.post(
+        "/queues", json={"queue_name": "self-dlq", "dlq_name": "self-dlq"}
+    ).status_code == 409
+
+    cleared = client.delete("/queues/queue-b/dlq")
+    assert cleared.status_code == 200
+    assert cleared.json()["dlq_name"] is None
+
+
 def test_duplicate_queue_and_unknown_queue_responses(client):
     create_queue(client, "unique")
     assert client.post("/queues", json={"queue_name": "unique"}).status_code == 409

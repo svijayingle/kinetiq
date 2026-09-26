@@ -2,13 +2,30 @@
 @queueName = orders
 @exampleQueue = hello-world
 
-### Hello World: create a queue
+### Create a dead-letter queue for Hello World
+# @name createHelloWorldDlq
+POST {{baseUrl}}/queues
+Content-Type: application/json
+
+{
+  "queue_name": "{{exampleQueue}}-dlq"
+}
+
+### Create the Hello World source queue
 # @name createHelloWorldQueue
 POST {{baseUrl}}/queues
 Content-Type: application/json
 
 {
   "queue_name": "{{exampleQueue}}"
+}
+
+### Configure its dead-letter queue
+PUT {{baseUrl}}/queues/{{exampleQueue}}/dlq
+Content-Type: application/json
+
+{
+  "dlq_name": "{{exampleQueue}}-dlq"
 }
 
 ### Get queue details
@@ -54,6 +71,9 @@ Content-Type: application/json
 
 ### Verify the message was removed from the queue
 GET {{baseUrl}}/queues/{{exampleQueue}}/length
+
+### Clear dead-letter routing from the source queue
+DELETE {{baseUrl}}/queues/{{exampleQueue}}/dlq
 
 ### Create a dead-letter queue before creating a source queue that references it
 POST {{baseUrl}}/queues

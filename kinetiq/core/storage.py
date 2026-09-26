@@ -8,7 +8,11 @@ from uuid import uuid4
 
 import aiosqlite
 
-from kinetiq.core.store import QueueAlreadyExistsError, QueueNotFoundError
+from kinetiq.core.store import (
+    QueueAlreadyExistsError,
+    QueueDeadLetterCycleError,
+    QueueNotFoundError,
+)
 
 
 class SQLiteStorage:
@@ -70,6 +74,9 @@ class SQLiteStorage:
         async with self._connect() as connection:
             await connection.execute("BEGIN IMMEDIATE")
             if dlq_name is not None:
+                if dlq_name == queue_name:
+                    await connection.rollback()
+                    raise QueueDeadLetterCycleError(queue_name, dlq_name)
                 cursor = await connection.execute(
                     "SELECT 1 FROM queues WHERE queue_name = ?", (dlq_name,)
                 )
@@ -133,6 +140,59 @@ class SQLiteStorage:
         if row is None:
             raise QueueNotFoundError(queue_name)
         return int(row["message_count"])
+
+    async def configure_queue_dlq(
+        self, queue_name: str, dlq_name: str | None
+    ) -> dict[str, Any]:
+        async with self._connect() as connection:
+            await connection.execute("BEGIN IMMEDIATE")
+            cursor = await connection.execute(
+                "SELECT 1 FROM queues WHERE queue_name = ?", (queue_name,)
+            )
+            if await cursor.fetchone() is None:
+                await connection.rollback()
+                raise QueueNotFoundError(queue_name)
+
+            if dlq_name is not None:
+                if dlq_name == queue_name:
+                    await connection.rollback()
+                    raise QueueDeadLetterCycleError(queue_name, dlq_name)
+                cursor = await connection.execute(
+                    "SELECT 1 FROM queues WHERE queue_name = ?", (dlq_name,)
+                )
+                if await cursor.fetchone() is None:
+                    await connection.rollback()
+                    raise QueueNotFoundError(dlq_name)
+
+                cursor = await connection.execute(
+                    """WITH RECURSIVE dlq_chain(queue_name, dlq_name) AS (
+                           SELECT queue_name, dlq_name FROM queues
+                           WHERE queue_name = ?
+                           UNION
+                           SELECT next_queue.queue_name, next_queue.dlq_name
+                           FROM queues AS next_queue
+                           JOIN dlq_chain
+                             ON next_queue.queue_name = dlq_chain.dlq_name
+                           WHERE dlq_chain.dlq_name IS NOT NULL
+                       )
+                       SELECT 1 FROM dlq_chain
+                       WHERE queue_name = ? LIMIT 1""",
+                    (dlq_name, queue_name),
+                )
+                if await cursor.fetchone() is not None:
+                    await connection.rollback()
+                    raise QueueDeadLetterCycleError(queue_name, dlq_name)
+
+            await connection.execute(
+                "UPDATE queues SET dlq_name = ? WHERE queue_name = ?",
+                (dlq_name, queue_name),
+            )
+            cursor = await connection.execute(
+                "SELECT * FROM queues WHERE queue_name = ?", (queue_name,)
+            )
+            row = await cursor.fetchone()
+            await connection.commit()
+        return dict(row)
 
     async def publish(
         self,

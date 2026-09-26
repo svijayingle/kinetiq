@@ -80,6 +80,52 @@ paths:
         '404':
           description: Queue not found
 
+  /queues/{queue_name}/dlq:
+    put:
+      summary: Configure a Queue Dead-Letter Queue
+      operationId: configure_queue_dlq
+      parameters:
+        - name: queue_name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigureQueueDlqRequest'
+      responses:
+        '200':
+          description: Updated queue configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueDetailsResponse'
+        '404':
+          description: Source or dead-letter queue not found
+        '409':
+          description: Configuration would create a dead-letter routing cycle
+    delete:
+      summary: Clear a Queue Dead-Letter Queue
+      operationId: clear_queue_dlq
+      parameters:
+        - name: queue_name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated queue configuration with dead-letter routing disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueDetailsResponse'
+        '404':
+          description: Queue not found
+
   /queues/{queue_name}/messages:
     post:
       summary: Send Message (Publish)
@@ -243,6 +289,16 @@ components:
           type: integer
           minimum: 0
           description: New default timeout for future message receives; existing visibility leases are unchanged.
+
+    ConfigureQueueDlqRequest:
+      type: object
+      required:
+        - dlq_name
+      properties:
+        dlq_name:
+          type: string
+          description: Name of an existing dead-letter queue.
+          example: "orders-dlq"
 
     SendMessageRequest:
       type: object
